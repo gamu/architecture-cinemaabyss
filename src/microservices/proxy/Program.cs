@@ -9,6 +9,9 @@ builder.Services.AddSingleton<IProxyService, ProxyService>();
 
 var app = builder.Build();
 
+// Validate configuration on startup
+ValidateConfiguration(app.Configuration);
+
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok());
 
@@ -19,6 +22,46 @@ app.MapFallback(async (HttpContext context, IProxyService proxyService) =>
 });
 
 app.Run();
+
+static void ValidateConfiguration(IConfiguration configuration)
+{
+    var requiredVariables = new[]
+    {
+        "MOVIES_SERVICE_URL",
+        "MONOLITH_URL"
+    };
+
+    var missingVariables = new List<string>();
+
+    foreach (var variable in requiredVariables)
+    {
+        var value = configuration[variable];
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            missingVariables.Add(variable);
+        }
+    }
+
+    if (missingVariables.Any())
+    {
+        var message = $"Missing required environment variables: {string.Join(", ", missingVariables)}";
+        throw new InvalidOperationException(message);
+    }
+
+    // Validate migration percent if migration is enabled
+    var migrationEnabled = configuration["GRADUAL_MIGRATION"]?.ToLowerInvariant() == "true";
+    if (migrationEnabled)
+    {
+        var migrationPercentStr = configuration["MOVIES_MIGRATION_PERCENT"];
+        if (string.IsNullOrWhiteSpace(migrationPercentStr) || 
+            !int.TryParse(migrationPercentStr, out var percent) || 
+            percent < 0 || percent > 100)
+        {
+            throw new InvalidOperationException(
+                "MOVIES_MIGRATION_PERCENT must be a valid integer between 0 and 100 when GRADUAL_MIGRATION is enabled");
+        }
+    }
+}
 
 public interface IProxyService
 {
@@ -40,10 +83,30 @@ public class ProxyService : IProxyService
         _httpClient = httpClient;
         _configuration = configuration;
         
-        _moviesServiceUrl = _configuration["MOVIES_SERVICE_URL"] ?? "";
-        _monolithUrl = _configuration["MONOLITH_URL"] ?? "";
-        _migrationEnabled = _configuration["GRADUAL_MIGRATION"] == "true";
-        _migrationPercent = int.TryParse(_configuration["MOVIES_MIGRATION_PERCENT"], out var percent) ? percent : 0;
+        // Required configuration - these are validated at startup
+        _moviesServiceUrl = _configuration["MOVIES_SERVICE_URL"]!;
+        _monolithUrl = _configuration["MONOLITH_URL"]!;
+        
+        // Optional configuration with defaults
+        _migrationEnabled = _configuration["GRADUAL_MIGRATION"]?.ToLowerInvariant() == "true";
+        _migrationPercent = GetMigrationPercent(_configuration);
+    }
+
+    private static int GetMigrationPercent(IConfiguration configuration)
+    {
+        var migrationPercentStr = configuration["MOVIES_MIGRATION_PERCENT"];
+        
+        if (string.IsNullOrWhiteSpace(migrationPercentStr))
+        {
+            return 0; // Default: no migration
+        }
+
+        if (int.TryParse(migrationPercentStr, out var percent))
+        {
+            return Math.Clamp(percent, 0, 100); // Ensure it's within valid range
+        }
+
+        return 0; // Default if parsing fails
     }
 
     public async Task HandleProxyRequest(HttpContext context)
@@ -69,14 +132,13 @@ public class ProxyService : IProxyService
         }
         else
         {
-            // Default: proxy to monolith
             targetUrl = _monolithUrl;
         }
 
         if (string.IsNullOrEmpty(targetUrl))
         {
             context.Response.StatusCode = 500;
-            await context.Response.WriteAsync("Target URL not configured");
+            await context.Response.WriteAsync("Internal server error: Target URL not configured properly");
             return;
         }
 

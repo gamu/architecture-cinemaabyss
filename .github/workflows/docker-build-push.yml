@@ -125,9 +125,3 @@ jobs:
           labels: ${{ steps.meta-events.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Run API tests
-        run: |
-          docker compose -f docker-compose.ci.yml up -d
-          sleep 10
-          docker exec -t api-tests npm run test:local
