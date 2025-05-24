@@ -9,6 +9,9 @@
 /vendor/
 /Godeps/
 
+# Cursor configuration folder
+.cursor/
+
 # Go workspace file
 go.work
 
