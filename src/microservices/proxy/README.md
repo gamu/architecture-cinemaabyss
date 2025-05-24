@@ -35,6 +35,23 @@
 - ✅ Корректность значения `MOVIES_MIGRATION_PERCENT` (0-100) при включенной миграции
 - ❌ При отсутствии обязательных переменных сервис завершается с ошибкой
 
+### Логирование конфигурации
+
+При успешном запуске сервис выводит в логи (**stdout**):
+```
+2024-01-15 10:30:45 info: Program[0] === Proxy Configuration ===
+2024-01-15 10:30:45 info: Program[0] MOVIES_SERVICE_URL: http://movies-service:8001
+2024-01-15 10:30:45 info: Program[0] MONOLITH_URL: http://monolith:8002
+2024-01-15 10:30:45 info: Program[0] GRADUAL_MIGRATION: True
+2024-01-15 10:30:45 info: Program[0] MOVIES_MIGRATION_PERCENT: 50
+2024-01-15 10:30:45 info: Program[0] === Configuration loaded successfully ===
+```
+
+**Особенности логирования:**
+- 📤 Все логи выводятся в **stdout** (подходит для Docker и Kubernetes)
+- 🕐 Формат: одна строка с временной меткой UTC
+- 🐛 Помогает при отладке и проверке правильности настройки переменных окружения
+
 ## Маршрутизация
 
 ### Всегда на монолит:

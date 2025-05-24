@@ -3,6 +3,13 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure logging to output to stdout
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(options =>
+{
+    options.FormatterName = "simple";
+});
+
 // Add services to the container.
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IProxyService, ProxyService>();
@@ -10,7 +17,7 @@ builder.Services.AddSingleton<IProxyService, ProxyService>();
 var app = builder.Build();
 
 // Validate configuration on startup
-ValidateConfiguration(app.Configuration);
+ValidateConfiguration(app.Configuration, app.Logger);
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok());
@@ -23,7 +30,7 @@ app.MapFallback(async (HttpContext context, IProxyService proxyService) =>
 
 app.Run();
 
-static void ValidateConfiguration(IConfiguration configuration)
+static void ValidateConfiguration(IConfiguration configuration, ILogger logger)
 {
     var requiredVariables = new[]
     {
@@ -61,6 +68,21 @@ static void ValidateConfiguration(IConfiguration configuration)
                 "MOVIES_MIGRATION_PERCENT must be a valid integer between 0 and 100 when GRADUAL_MIGRATION is enabled");
         }
     }
+
+    // Log configuration values
+    logger.LogInformation("=== Proxy Configuration ===");
+    logger.LogInformation("MOVIES_SERVICE_URL: {MOVIES_SERVICE_URL}", configuration["MOVIES_SERVICE_URL"]);
+    logger.LogInformation("MONOLITH_URL: {MONOLITH_URL}", configuration["MONOLITH_URL"]);
+    
+    logger.LogInformation("GRADUAL_MIGRATION: {GRADUAL_MIGRATION}", migrationEnabled);
+    
+    if (migrationEnabled)
+    {
+        var migrationPercent = configuration["MOVIES_MIGRATION_PERCENT"] ?? "0";
+        logger.LogInformation("MOVIES_MIGRATION_PERCENT: {MOVIES_MIGRATION_PERCENT}", migrationPercent);
+    }
+    
+    logger.LogInformation("=== Configuration loaded successfully ===");
 }
 
 public interface IProxyService
