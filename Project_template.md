@@ -12,7 +12,7 @@
 ![Скрин запуска тестов](./docs/test-proofs.png)
 
 Скрин топиков Кафка
-![Скрин топиков Кафка](./docs/kafka-topics.png)
+![Скрин топиков Кафка](./docs/topics.png)
 
 # Задание 3
 
@@ -227,6 +227,8 @@ cat .docker/config.json | base64
 
 #### Шаг 3
 Добавьте сюда скриншота вывода при вызове https://cinemaabyss.example.com/api/movies и  скриншот вывода event-service после вызова тестов.
+![Скрин вывода при вызове https://cinemaabyss.example.com/api/movies](./docs/movies_result_from_proxy.png)
+![Скрин вывода event-service после вызова тестов](./docs/events-service-log.png)
 
 
 # Задание 4

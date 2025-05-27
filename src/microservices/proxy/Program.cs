@@ -136,14 +136,12 @@ public class ProxyService : IProxyService
         var path = context.Request.Path.Value;
         string targetUrl;
 
-        // Routes that always go to monolith
         if (path == "/api/users" || path == "/api/payments" || path == "/api/subscriptions")
         {
             targetUrl = _monolithUrl;
         }
         else if (path == "/api/movies" || path == "/api/movies/health")
         {
-            // Migration logic for movies microservice
             targetUrl = ShouldUseMicroservice(context) ? _moviesServiceUrl : _monolithUrl;
         }
         else if (path == "/health")
