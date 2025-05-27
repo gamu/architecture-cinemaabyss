@@ -1,0 +1,91 @@
+@startuml C4_Container_CinemaAbyss_ToBeArchitecture
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram for CinemaAbyss To-Be Architecture
+
+Person(user_mobile, "Mobile User", "Пользователь мобильного приложения")
+Person(user_web, "Web User", "Пользователь веб-приложения") 
+Person(user_tv, "Smart TV User", "Пользователь Smart TV")
+
+System_Ext(payment_systems, "Payment Systems", "Внешние платежные системы (Сбер, Тинькофф и др.)")
+System_Ext(content_providers, "Content Providers", "Поставщики контента (Netflix, Амедиатека и др.)")
+System_Ext(loyalty_systems, "Loyalty Systems", "Системы лояльности (маркетплейсы)")
+System_Ext(recommendation_engine, "Recommendation Engine", "Внешняя рекомендательная система")
+
+System_Boundary(cinemaabyss, "CinemaAbyss Platform") {
+    Container(api_gateway, "API Gateway", "Kong/NGINX", "Единая точка входа, маршрутизация запросов, аутентификация, rate limiting")
+    
+    Container(user_service, "User Management Service", "Go, Gin", "Управление пользователями, аутентификация, авторизация, профили")
+    ContainerDb(user_db, "User Database", "PostgreSQL", "Пользователи, роли, сессии")
+    
+    Container(content_service, "Content Metadata Service", "Go, Gin", "Метаданные фильмов, жанры, актеры, рейтинги, поиск")
+    ContainerDb(content_db, "Content Database", "PostgreSQL", "Фильмы, жанры, актеры, метаданные")
+    
+    Container(payment_service, "Payment & Billing Service", "Go, Gin", "Платежи, подписки, биллинг, скидки")
+    ContainerDb(payment_db, "Payment Database", "PostgreSQL", "Платежи, подписки, транзакции")
+    
+    Container(streaming_service, "Content Streaming Service", "Go, Gin", "Стриминг видео, управление контентом, CDN")
+    ContainerDb(streaming_db, "Streaming Database", "PostgreSQL", "Ссылки на контент, метрики просмотров")
+    
+    Container(user_experience_service, "User Experience Service", "Go, Gin", "Избранное, оценки, просмотренное, персональные данные")
+    ContainerDb(user_exp_db, "User Experience Database", "PostgreSQL", "Избранное, оценки, история просмотров")
+    
+    Container(notification_service, "Notification Service", "Go, Gin", "Уведомления, email, push, SMS")
+    
+    Container(analytics_service, "Analytics Service", "Go, Gin", "Аналитика, метрики, отчеты")
+    ContainerDb(analytics_db, "Analytics Database", "ClickHouse", "События, метрики, аналитические данные")
+    
+    Container(message_broker, "Message Broker", "Apache Kafka", "Асинхронная обработка событий, интеграция между сервисами")
+    Container(cache, "Cache Layer", "Redis Cluster", "Кэширование метаданных, сессий, часто запрашиваемых данных")
+    
+    Container(monitoring, "Monitoring & Logging", "Prometheus, Grafana, ELK", "Мониторинг системы, сбор логов, алерты")
+}
+
+Rel(user_mobile, api_gateway, "HTTPS/REST")
+Rel(user_web, api_gateway, "HTTPS/REST") 
+Rel(user_tv, api_gateway, "HTTPS/REST")
+
+Rel(api_gateway, user_service, "HTTP/gRPC", "Аутентификация, управление пользователями")
+Rel(api_gateway, content_service, "HTTP/gRPC", "Поиск и получение метаданных")
+Rel(api_gateway, payment_service, "HTTP/gRPC", "Платежи и подписки")
+Rel(api_gateway, streaming_service, "HTTP/gRPC", "Стриминг контента")
+Rel(api_gateway, user_experience_service, "HTTP/gRPC", "Избранное, оценки")
+Rel(api_gateway, notification_service, "HTTP/gRPC", "Уведомления")
+
+Rel(user_service, user_db, "SQL")
+Rel(content_service, content_db, "SQL")
+Rel(payment_service, payment_db, "SQL")
+Rel(streaming_service, streaming_db, "SQL")
+Rel(user_experience_service, user_exp_db, "SQL")
+Rel(analytics_service, analytics_db, "SQL")
+
+Rel(user_service, cache, "Redis Protocol", "Кэширование сессий")
+Rel(content_service, cache, "Redis Protocol", "Кэширование метаданных")
+Rel(streaming_service, cache, "Redis Protocol", "Кэширование ссылок")
+
+Rel(user_service, message_broker, "Kafka Protocol", "События пользователей")
+Rel(content_service, message_broker, "Kafka Protocol", "События контента")
+Rel(payment_service, message_broker, "Kafka Protocol", "События платежей")
+Rel(streaming_service, message_broker, "Kafka Protocol", "События просмотров")
+Rel(user_experience_service, message_broker, "Kafka Protocol", "События пользовательского опыта")
+
+Rel(message_broker, analytics_service, "Kafka Protocol", "Обработка событий")
+Rel(message_broker, notification_service, "Kafka Protocol", "Триггеры уведомлений")
+Rel(message_broker, recommendation_engine, "Kafka Protocol", "События для рекомендаций")
+
+Rel(payment_service, payment_systems, "HTTPS/REST", "Обработка платежей")
+Rel(streaming_service, content_providers, "HTTPS/REST", "Получение контента")
+Rel(user_experience_service, loyalty_systems, "HTTPS/REST", "Интеграция с программами лояльности")
+Rel_Back(recommendation_engine, content_service, "HTTPS/REST", "Получение рекомендаций")
+
+Rel(monitoring, user_service, "HTTP", "Метрики и логи")
+Rel(monitoring, content_service, "HTTP", "Метрики и логи")
+Rel(monitoring, payment_service, "HTTP", "Метрики и логи")
+Rel(monitoring, streaming_service, "HTTP", "Метрики и логи")
+Rel(monitoring, user_experience_service, "HTTP", "Метрики и логи")
+Rel(monitoring, analytics_service, "HTTP", "Метрики и логи")
+Rel(monitoring, notification_service, "HTTP", "Метрики и логи")
+
+@enduml 
